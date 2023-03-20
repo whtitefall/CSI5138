@@ -18,3 +18,6 @@ https://docs.google.com/document/d/1iwXgA0vUzHsacV6Evgrw17PqTA6CuzkA_54MJROzV8c/
 Overleaf report 
 
 https://www.overleaf.com/5763794158rzqxkcbfdwtc
+
+
+https://github.com/ml874/Blackjack--Reinforcement-Learning
