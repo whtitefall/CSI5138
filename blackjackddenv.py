@@ -12,6 +12,12 @@ def cmp(a, b):
 # 1 = Ace, 2-10 = Number cards, Jack/Queen/King = 10
 CARDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10] * 4
 
+def count(card):
+    if 2<=card<=6:
+        return 1
+    elif 7<=card<=9:
+        return 0
+    return -1
 
 def draw_card(inputdeck):
     # print(inputdeck)
@@ -85,7 +91,7 @@ class BlackjackEnv(gym.Env):
     # 3- Split
     # 4- Surrender
     
-    def __init__(self, numdecks = 4, natural=False):
+    def __init__(self, numdecks = 4, natural=False, counting = False):
         print('HELLO')
         self.action_space = spaces.Discrete(3)
         self.observation_space = spaces.Tuple((
@@ -93,6 +99,13 @@ class BlackjackEnv(gym.Env):
             spaces.Discrete(11), # Possible up card dealer has
             spaces.Discrete(2), # True or False- Usable Ace
             spaces.Discrete(2))) # True or False- Can Double Down
+        if counting:
+            self.observation_space = spaces.Tuple((
+                spaces.Discrete(32), # Possible hands player can have
+                spaces.Discrete(11), # Possible up card dealer has
+                spaces.Discrete(2), # True or False- Usable Ace
+                spaces.Discrete(2), # True or False- Can Double Down
+                spaces.Box(-100,100,dtype=int)))
         self._seed()
         self.actionstaken = 0 # Every move increases actions taken by 1
 
@@ -105,8 +118,12 @@ class BlackjackEnv(gym.Env):
         
         self.decks = CARDS * self.numdecks
         random.shuffle(self.decks)
+
+        self.running_count = 0
+        self.counting = counting
         # print(self.decks)
         self._reset()
+
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -120,6 +137,7 @@ class BlackjackEnv(gym.Env):
         if self._deck_is_out(self.decks):
             self.decks = CARDS * self.numdecks
             random.shuffle(self.decks)
+            self.running_count = 0
             # print('RESET')
         # print(self.decks)
         
@@ -133,8 +151,14 @@ class BlackjackEnv(gym.Env):
             
             ddown = False
             self.actionstaken += 1  
+
+            for i in range(1, len(self.dealer)):
+                self.running_count += count(self.dealer[i])
+
         elif action == 1:  # hit: add a card to players hand and return
             self.player.append(draw_card(self.decks))
+            self.running_count += count(self.player[-1])
+
             if is_bust(self.player):
                 done = True
                 reward = -1
@@ -153,6 +177,8 @@ class BlackjackEnv(gym.Env):
             assert(len(self.player) == 2)
 
             self.player.append(draw_card(self.decks))
+            self.running_count += count(self.player[-1])
+
             if is_bust(self.player):
                 done = True
                 reward = -2
@@ -165,6 +191,9 @@ class BlackjackEnv(gym.Env):
                 done = True
                 ddown = False
                 self.actionstaken += 1            
+            
+            for i in range(1, len(self.dealer)):
+                self.running_count += count(self.dealer[i])
 
 
         # elif action == 3:
@@ -183,8 +212,9 @@ class BlackjackEnv(gym.Env):
 
     def _get_obs(self):
         # RETURNS: (PLAYER HANDS, DEALER UP CARD, USABLE ACE, CAN DOUBLE DOWN)
-        return (tuple(sorted(self.player)), self.dealer[0], usable_ace(self.player), can_double_down(self.player,  
-                                                                                                self.actionstaken))
+        if self.counting:
+            return tuple(sorted(self.player)), self.dealer[0], usable_ace(self.player), can_double_down(self.player,  self.actionstaken), self.running_count
+        return tuple(sorted(self.player)), self.dealer[0], usable_ace(self.player), can_double_down(self.player,  self.actionstaken)
     def _get_dealer_hand(self):
         return self.dealer
     
@@ -198,4 +228,8 @@ class BlackjackEnv(gym.Env):
         # print(len(self.decks))
         self.dealer = draw_hand(self.decks)
         self.player = draw_hand(self.decks)
+        
+        self.running_count += count(self.dealer[0]) + count(self.player[0]) + count(self.player[1])
+
+
         return self._get_obs()
