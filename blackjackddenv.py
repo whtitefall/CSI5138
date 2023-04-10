@@ -214,7 +214,8 @@ class BlackjackEnv(gym.Env):
         # RETURNS: (PLAYER HANDS, DEALER UP CARD, USABLE ACE, CAN DOUBLE DOWN)
         if self.counting:
             return tuple(sorted(self.player)), self.dealer[0], usable_ace(self.player), can_double_down(self.player,  self.actionstaken), self.running_count
-        return tuple(sorted(self.player)), self.dealer[0], usable_ace(self.player), can_double_down(self.player,  self.actionstaken)
+        # return tuple(sorted(self.player)), self.dealer[0], usable_ace(self.player), can_double_down(self.player,  self.actionstaken)
+        return sum(self.player), self.dealer[0], usable_ace(self.player), can_double_down(self.player,  self.actionstaken)
     def _get_dealer_hand(self):
         return self.dealer
     
